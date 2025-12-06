@@ -1,0 +1,14 @@
+Configuración: ZDT3_4000
+N = 100, G = 40, T = 20, presupuesto = 4000 evals
+Dimensión = 30
+
+seed=01  -> evals=4000, z*=[ 0.         -0.65266751], fichero=final_pop_seed01.txt
+seed=02  -> evals=4000, z*=[ 0.         -0.32874567], fichero=final_pop_seed02.txt
+seed=03  -> evals=4000, z*=[ 0.         -0.66901361], fichero=final_pop_seed03.txt
+seed=04  -> evals=4000, z*=[ 0.         -0.60188014], fichero=final_pop_seed04.txt
+seed=05  -> evals=4000, z*=[ 0.         -0.57670406], fichero=final_pop_seed05.txt
+seed=06  -> evals=4000, z*=[ 0.         -0.27299971], fichero=final_pop_seed06.txt
+seed=07  -> evals=4000, z*=[ 0.         -0.67726838], fichero=final_pop_seed07.txt
+seed=08  -> evals=4000, z*=[ 0.         -0.67290264], fichero=final_pop_seed08.txt
+seed=09  -> evals=4000, z*=[ 0.         -0.66223888], fichero=final_pop_seed09.txt
+seed=10  -> evals=4000, z*=[ 0.         -0.55480839], fichero=final_pop_seed10.txt
