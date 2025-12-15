@@ -1,85 +1,109 @@
-# scripts/3_plot_results.py
 import sys
 import os
+import shutil
+import stat
+import time
+
+# Añadir directorio raíz al path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
 import matplotlib.pyplot as plt
 import config
 
-def load_front_nsga(budget, seed):
-    """Carga frente NSGA-II detectando formato (35 cols vs 2 cols)."""
-    nsga_folder_name = config.NSGA_MAPPING.get(budget)
-    if not nsga_folder_name: return None
+# --- LIMPIEZA ROBUSTA ---
+def on_rm_error(func, path, exc_info):
+    os.chmod(path, stat.S_IWRITE)
+    try: func(path)
+    except Exception as e: print(f"    [Advertencia] {e}")
+
+def force_clean_directory(directory):
+    if not directory.exists(): return
+    print(f"(!) Limpiando carpeta antigua: {directory}")
+    for i in range(3):
+        try:
+            shutil.rmtree(directory, onerror=on_rm_error)
+            break 
+        except Exception:
+            time.sleep(0.5)
+
+# --- CARGA DINÁMICA DE NSGA-II ---
+
+def load_front_nsga(budget, seed, n_pop):
+    """
+    Carga frente NSGA-II basado en N y Budget -> Carpeta P{N}G{G}
+    """
+    generations = int(budget / n_pop)
+    nsga_folder = f"P{n_pop}G{generations}"
     
-    # Construir ruta base: data/nsga2_reference/ZDT3_4000/P100G40/
-    base_path = config.NSGA_DIR / f"ZDT3_{budget}" / nsga_folder_name
-    
-    # Buscar fichero por patrón
+    base_path = config.NSGA_DIR / f"ZDT3_{budget}" / nsga_folder
     pattern = f"*seed{seed:02d}.out"
     found = list(base_path.glob(pattern))
     
     if not found: return None
     
-    data = np.loadtxt(found[0])
-    
-    # Detectar formato
-    if data.shape[1] >= 32:
-        # Formato jMetal/Standard: 30 vars + 2 objs + ...
-        # Objetivos en columnas 30 y 31 (indices)
-        return data[:, 30:32]
-    else:
-        # Formato simple (si lo hubiera): solo objetivos
-        return data[:, 0:2]
+    try:
+        data = np.loadtxt(found[0])
+        if data.ndim == 1: return data[0:2].reshape(1, 2)
+        return data[:, 0:2] # Cols 0 y 1 son objetivos
+    except Exception:
+        return None
 
-def plot_comparison(budget, exp_name, seed):
-    # Rutas
+def plot_comparison(budget, exp_name, seed, params):
+    # Cargar MOEA/D
     moea_file = config.RESULTS_DIR / exp_name / str(budget) / f"seed_{seed:02d}.txt"
-    
-    if not moea_file.exists():
-        print(f"[SKIP] No hay datos para {exp_name} B={budget} S={seed}")
-        return
+    if not moea_file.exists(): return
 
-    # Cargar datos
-    F_moea = np.loadtxt(moea_file)[:, -2:] # Últimas 2 columnas
-    F_nsga = load_front_nsga(budget, seed)
+    try:
+        F_moea = np.loadtxt(moea_file)[:, -2:] 
+    except: return
+
+    # Cargar NSGA-II Dinámico (usando N del experimento)
+    n_pop = params['N']
+    F_nsga = load_front_nsga(budget, seed, n_pop)
     
-    # Crear Figura
+    # Plot
     plt.figure(figsize=(8, 6))
     
-    # Frente NSGA-II (Fondo)
+    # Fondo: NSGA-II (si existe)
     if F_nsga is not None:
-        plt.scatter(F_nsga[:, 0], F_nsga[:, 1], c='orange', marker='x', alpha=0.6, label='NSGA-II (Referencia)')
+        label_nsga = f'NSGA-II (N={n_pop})'
+        plt.scatter(F_nsga[:, 0], F_nsga[:, 1], c='orange', marker='x', alpha=0.5, label=label_nsga)
+    else:
+        # Si no tienes esa carpeta de NSGA, no rompe, solo avisa visualmente en el plot si quieres
+        pass 
     
-    # Frente MOEA/D (Primer plano)
+    # Frente: Tu Algoritmo
     plt.scatter(F_moea[:, 0], F_moea[:, 1], c='dodgerblue', s=30, edgecolors='k', linewidth=0.5, label=f'MOEA/D ({exp_name})')
     
-    plt.title(f"Comparativa ZDT3 - {exp_name}\nPresupuesto: {budget} - Seed: {seed}")
+    plt.title(f"ZDT3: {exp_name} vs NSGA-II\n(Eval: {budget}, N: {n_pop}, Seed: {seed})")
     plt.xlabel("$f_1$")
     plt.ylabel("$f_2$")
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.5)
-    plt.xlim(0, 1.1)
-    plt.ylim(-0.8, 1.2) # Ajuste visual ZDT3
+    plt.xlim(0.0, 1.1)
+    plt.ylim(-0.8, 1.2)
     
-    # Guardar
-    out_dir = config.FIGURES_DIR
-    out_dir.mkdir(exist_ok=True)
-    out_name = out_dir / f"Compare_{exp_name}_B{budget}_S{seed:02d}.png"
-    
+    out_name = config.FIGURES_DIR / f"Compare_{exp_name}_B{budget}_S{seed:02d}.png"
     plt.savefig(out_name, dpi=150)
     plt.close()
-    print(f"Generado: {out_name}")
+    print(f"   Generado: {out_name.name}")
 
 def main():
     print("--- GENERANDO GRÁFICAS COMPARATIVAS ---")
     
-    # Generar para Seed 1 como muestra (o recorrer todas si quieres)
-    SEED_TO_PLOT = 1
+    # Limpieza inicial
+    force_clean_directory(config.FIGURES_DIR)
+    config.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     
-    for exp_name in config.EXPERIMENTS.keys():
+    SEED_TO_PLOT = 1 
+    
+    for exp_name, params in config.EXPERIMENTS.items():
+        print(f">>> Gráficas para: {exp_name}")
         for budget in config.BUDGETS:
-            plot_comparison(budget, exp_name, SEED_TO_PLOT)
+            plot_comparison(budget, exp_name, SEED_TO_PLOT, params)
+            
+    print("\n[OK] Todas las gráficas generadas.")
 
 if __name__ == "__main__":
     main()

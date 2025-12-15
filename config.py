@@ -1,52 +1,66 @@
 # config.py
 from pathlib import Path
 
-# --- Directorios ---
+# Directorios para "Tener organizados todos mis ficheros" (Punto 9)
 BASE_DIR = Path(".")
 DATA_DIR = BASE_DIR / "data"
 RESULTS_DIR = DATA_DIR / "experiments"
-NSGA_DIR = DATA_DIR / "nsga2_reference" 
+NSGA_DIR = BASE_DIR / "nsga2"
 FIGURES_DIR = BASE_DIR / "figures"
 
-# --- Parámetros de Control Global ---
-SEEDS = list(range(1, 11))  # Ejecutar semillas 1 a 10
-BUDGETS = [4000, 10000]     # Límites de evaluaciones (Presupuestos)
+# "He probado varias semillas para comprobar estabilidad" (Punto 3)
+SEEDS = list(range(1, 11)) 
+BUDGETS = [4000, 10000]
 
-# --- Definición de Experimentos ---
-# Modifica estos diccionarios para probar distintas configuraciones.
-# El algoritmo calculará automáticamente las Generaciones (G) = Budget / N
+# Punto de referencia para Hipervolumen (Punto 6)
+# Para ZDT3 (minimización), el punto ideal es (0,0) y el nadir real es aprox (0.85, 1.0).
+# Usamos (1.1, 1.1) para asegurar que cubrimos todo el frente válido.
+HV_REF_POINT = [1.1, 1.1]
+
+# Experimentos
 EXPERIMENTS = {
-    # Configuración Base (Recomendada: P=100)
-    # Para Budget 4000 -> G=40
-    # Para Budget 10000 -> G=100
     "BASELINE": {
-        "N": 100,           # Tamaño Población (Subproblemas)
-        "T": 20,            # Tamaño Vecindad (20% de N)
-        "F": 0.5,           # Factor mutación DE
-        "CR": 0.5,          # Prob. cruce DE
-        "SIG": 20.0,        # Sigma para mutación Gaussiana
-        "pm": 1/30,         # Prob. mutación por variable (1/dim)
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
     },
-    
-    # Variante con Población Reducida (P=80)
-    # Para Budget 4000 -> G=50
-    "P80_CONFIG": {
-        "N": 80,            # Al bajar N, aumentan las generaciones disponibles
-        "T": 16,            # Ajustamos vecindad al 20% de 80
-        "F": 0.5,
-        "CR": 0.5,
-        "SIG": 20.0,
-        "pm": 1/30,
+    "INFERIOR_SIG": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 10.0, "pm": 1/30
     },
-
-    # Variante Alta Exploración
-    "HIGH_MUTATION": {
-        "N": 100, "T": 20, "F": 0.9, "CR": 0.9, "SIG": 10.0, "pm": 1/30
+    "SUPERIOR_SIG": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 30.0, "pm": 1/30
     },
+    "INFERIOR_PM": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/40
+    },
+    "SUPERIOR_PM": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/20
+    },
+    "INFERIOR_CR": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.2, "SIG": 20.0, "pm": 1/30
+    },
+    "SUPERIOR_CR": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.8, "SIG": 20.0, "pm": 1/30
+    },
+    "INFERIOR_F": {
+        "N": 100, "T": 20, "F": 0.2, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "SUPERIOR_F": {
+        "N": 100, "T": 20, "F": 0.8, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "INFERIOR_T": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "SUPERIOR_T": {
+        "N": 100, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "N40": {
+        "N": 40, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "N80G50": {
+        "N": 80, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    },
+    "N200G50": {
+        "N": 200, "T": 20, "F": 0.5, "CR": 0.5, "SIG": 20.0, "pm": 1/30
+    }
 }
 
-# Mapeo para localizar los archivos de NSGA-II según el presupuesto
-NSGA_MAPPING = {
-    4000: "P100G40",   # Nombre de la carpeta de NSGA-II para 4000 evals
-    10000: "P100G100"  # Nombre de la carpeta de NSGA-II para 10000 evals
-}
+NSGA_MAPPING = {4000: "P100G40", 10000: "P100G100"}

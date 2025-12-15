@@ -1,8 +1,7 @@
-# scripts/1_run_experiments.py
 import os
 import sys
 
-# Añadir directorio raíz al path para importar src y config
+# Añadimos el directorio raíz al path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
@@ -12,42 +11,41 @@ from src.algorithm import MOEAD
 
 
 def save_results(path, pop, objs):
-    """Guarda población y objetivos en un fichero de texto."""
-    # Concatenar variables y objetivos: [x1...x30, f1, f2]
+    """Guarda población y objetivos: [x1...x30 f1 f2]"""
     data = np.hstack((pop, objs))
-    np.savetxt(path, data, fmt='%.6e')
+    np.savetxt(path, data, fmt='%.6e', delimiter='\t')
 
 def main():
-    print(f"--- INICIANDO EJECUCIÓN MASIVA DE EXPERIMENTOS ---")
-    print(f"Salida de datos: {config.RESULTS_DIR}\n")
+    print(f"--- INICIANDO EJECUCIÓN DE EXPERIMENTOS ---")
     
-    # Recorrer experimentos definidos en config.py
+    # Aseguramos que el directorio base exista, pero SIN borrar lo que haya dentro
+    config.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    print(f"Directorio base listo (acumulativo): {config.RESULTS_DIR}\n")
+    
+    # --- EJECUCIÓN ---
     for exp_name, params in config.EXPERIMENTS.items():
-        print(f">>> Experimento: {exp_name}")
+        print(f">>> Ejecutando: {exp_name}")
         
-        # Recorrer presupuestos (4000, 10000)
         for budget in config.BUDGETS:
-            # Crear estructura de carpetas: experiments/BASELINE/4000/
-            out_dir = config.RESULTS_DIR / exp_name / str(budget)
-            out_dir.mkdir(parents=True, exist_ok=True)
+            output_folder = config.RESULTS_DIR / exp_name / str(budget)
+            # Crea la carpeta específica del experimento si no existe
+            output_folder.mkdir(parents=True, exist_ok=True)
             
-            print(f"   - Presupuesto: {budget} evals")
+            print(f"   [Presupuesto: {budget}] -> {output_folder}")
             
-            # Ejecutar N semillas
             for seed in config.SEEDS:
-                # print(f"     Running Seed {seed}...", end='\r')
-                
-                # Instanciar y ejecutar
-                moea = MOEAD(params, seed)
-                pop, objs = moea.run(budget)
-                
-                # Guardar resultado
-                filename = out_dir / f"seed_{seed:02d}.txt"
-                save_results(filename, pop, objs)
+                filename = output_folder / f"seed_{seed:02d}.txt"
+                try:
+                    moea = MOEAD(params, seed)
+                    final_pop, final_objs = moea.run(budget)
+                    save_results(filename, final_pop, final_objs)
+                except Exception as e:
+                    print(f"     [ERROR] Seed {seed:02d}: {e}")
             
-            print(f"     [OK] 10 Semillas completadas.")
-    
-    print("\n--- TODOS LOS EXPERIMENTOS FINALIZADOS ---")
+            print(f"     -> 10 Semillas OK.")
+
+    print("\n--- FINALIZADO ---")
+    print("Siguiente paso: python scripts/2_compute_metrics.py")
 
 if __name__ == "__main__":
     main()
